@@ -1,0 +1,162 @@
+[
+  {
+    "slug": "da-hua-glass",
+    "beltSlug": "qi-xian-glass"
+  },
+  {
+    "slug": "guan-li-flange",
+    "beltSlug": "ding-xiang-flange"
+  },
+  {
+    "slug": "bo-da-ceramics",
+    "beltSlug": "huai-ren-ceramic"
+  },
+  {
+    "slug": "zun-yi-ceramics",
+    "beltSlug": "huai-ren-ceramic"
+  },
+  {
+    "slug": "qi-xian-hongchang",
+    "beltSlug": "qi-xian-glass"
+  },
+  {
+    "slug": "ding-xiang-hengda",
+    "beltSlug": "ding-xiang-flange"
+  },
+  {
+    "slug": "yan-hu-yongji",
+    "beltSlug": "yan-hu-pump"
+  },
+  {
+    "slug": "ji-shan-haitong",
+    "beltSlug": "ji-shan-diamond"
+  },
+  {
+    "slug": "taiyuan-taigang-steel",
+    "beltSlug": "taiyuan-stainless"
+  },
+  {
+    "slug": "huai-ren-jinlan",
+    "beltSlug": "huai-ren-ceramic"
+  },
+  {
+    "slug": "ye-shan-po",
+    "beltSlug": "forest-fruit"
+  },
+  {
+    "slug": "qiu-ji-millet",
+    "beltSlug": "small-grains"
+  },
+  {
+    "slug": "qing-xu-zilin",
+    "beltSlug": "qing-xu-vinegar"
+  },
+  {
+    "slug": "qing-xu-shuita",
+    "beltSlug": "qing-xu-vinegar"
+  },
+  {
+    "slug": "ping-yao-guanyun",
+    "beltSlug": "meat-products"
+  },
+  {
+    "slug": "shuo-zhou-lamb",
+    "beltSlug": "meat-products"
+  },
+  {
+    "slug": "yang-quan-fuxi-millet",
+    "beltSlug": "small-grains"
+  },
+  {
+    "slug": "datong-cereal",
+    "beltSlug": "small-grains"
+  },
+  {
+    "slug": "yun-cheng-apple",
+    "beltSlug": "forest-fruit"
+  },
+  {
+    "slug": "lv-liang-red-jujube",
+    "beltSlug": "forest-fruit"
+  },
+  {
+    "slug": "chang-zhi-led-co",
+    "beltSlug": "chang-zhi-led"
+  },
+  {
+    "slug": "chang-zhi-shenzi-led",
+    "beltSlug": "chang-zhi-led"
+  },
+  {
+    "slug": "chang-zhi-optics-module",
+    "beltSlug": "chang-zhi-led"
+  },
+  {
+    "slug": "jincheng-ai-camera",
+    "beltSlug": "jincheng-optoelectronics"
+  },
+  {
+    "slug": "jincheng-audio",
+    "beltSlug": "jincheng-optoelectronics"
+  },
+  {
+    "slug": "jincheng-blender",
+    "beltSlug": "jincheng-optoelectronics"
+  },
+  {
+    "slug": "taiyuan-semiconductor",
+    "beltSlug": "new-materials"
+  },
+  {
+    "slug": "taiyuan-carbon-fiber",
+    "beltSlug": "new-materials"
+  },
+  {
+    "slug": "lv-liang-sapphire",
+    "beltSlug": "new-materials"
+  },
+  {
+    "slug": "lv-liang-aluminum-mg",
+    "beltSlug": "new-materials"
+  },
+  {
+    "slug": "ping-yao-lacquer-co",
+    "beltSlug": "ping-yao-lacquer"
+  },
+  {
+    "slug": "ping-yao-hongguang",
+    "beltSlug": "ping-yao-lacquer"
+  },
+  {
+    "slug": "ping-yao-qihu",
+    "beltSlug": "ping-yao-lacquer"
+  },
+  {
+    "slug": "ping-yao-lacquer-studio",
+    "beltSlug": "ping-yao-lacquer"
+  },
+  {
+    "slug": "gao-ping-lu-silk-group",
+    "beltSlug": "gao-ping-lu-silk"
+  },
+  {
+    "slug": "gao-ping-silk-craft",
+    "beltSlug": "gao-ping-lu-silk"
+  },
+  {
+    "slug": "gao-ping-fabric",
+    "beltSlug": "gao-ping-lu-silk"
+  },
+  {
+    "slug": "ding-xiang-wood-workshop",
+    "beltSlug": "ding-xiang-wood"
+  },
+  {
+    "slug": "ding-xiang-furniture",
+    "beltSlug": "ding-xiang-wood"
+  },
+  {
+    "slug": "ding-xiang-wood-craft",
+    "beltSlug": "ding-xiang-wood"
+  }
+]

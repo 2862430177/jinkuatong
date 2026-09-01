@@ -1,0 +1,30 @@
+@import "tailwindcss";
+
+/* 设计令牌（Tailwind v4 @theme）：
+   品牌色：深青（晋商基调）+ 金色点缀（需求文档 §9）
+   - brand：深青系
+   - gold：金色系
+   - ink：正文灰 */
+@theme {
+  --color-brand-950: #08292a;
+  --color-brand-900: #0b3435;
+  --color-brand-800: #0f3d3e;
+  --color-brand-700: #155253;
+  --color-brand-600: #1c6666;
+  --color-brand-200: #9fc2bf;
+  --color-brand-100: #d9e9e6;
+  --color-brand-50: #f0f7f5;
+
+  --color-gold-600: #a8862f;
+  --color-gold-500: #c8a24b;
+  --color-gold-400: #d9b869;
+  --color-gold-100: #f4ead4;
+
+  --color-ink-900: #1b2323;
+  --color-ink-600: #4b5a5a;
+  --color-ink-400: #7c8b8b;
+}
+
+body {
+  @apply bg-white text-ink-900 antialiased;
+}

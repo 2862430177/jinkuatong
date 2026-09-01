@@ -1,0 +1,43 @@
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env
+.env
+.env*.local
+
+# typescript
+*.tsbuildinfo
+
+# local dev logs
+dev.log
+dev.err.log
+
+# static export backups (old build outputs, keep out of git)
+/out_old/
+/out_prev/
+/out_prev_0901/
+/out_prev_0902/
+/out_prev_0902b/
+/.next_prev_*/
+
+# stray temp file
+x\[1\]\)

@@ -1,0 +1,32 @@
+{
+  "name": "jinkuatong",
+  "version": "0.1.0",
+  "private": true,
+  "description": "晋跨通 - 让山西制造，一站卖全球（品牌官网 + 产业带出海渠道地图）",
+  "scripts": {
+    "dev": "next dev",
+    "build": "npm run validate && next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "validate": "tsx scripts/validate-data.ts",
+    "check-links": "tsx scripts/check-links.ts"
+  },
+  "dependencies": {
+    "next": "^15.3.3",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.3.1",
+    "@tailwindcss/postcss": "^4.1.4",
+    "@types/node": "^20.17.0",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "eslint": "^9.31.0",
+    "eslint-config-next": "^15.3.3",
+    "tailwindcss": "^4.1.4",
+    "tsx": "^4.23.13",
+    "typescript": "^5.8.3"
+  }
+}
