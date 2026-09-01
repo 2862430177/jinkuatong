@@ -10,6 +10,9 @@ import { SectionTitle } from "@/components/ui/SectionTitle";
 
 const CONTACT_EMAIL = "hello@jinkuatong.com";
 
+/** 认领/建站人工客服手机号（微信同号）：用户不便在线提交表单时可电话联系 */
+const CONTACT_PHONE = "17611535739";
+
 /** 第三方表单服务 endpoint（Formspree 等）；未配置时走 mailto 保底 */
 const FORM_ENDPOINT = process.env.NEXT_PUBLIC_FORM_ENDPOINT ?? "";
 
@@ -91,6 +94,14 @@ export default function ClaimPage() {
         as="h1"
       />
 
+      {/* 人工客服联系方式：用户不想在线提交表单时可电话/微信直接联系 */}
+      <div className="mb-6 rounded-lg border border-brand-100 bg-brand-50/70 px-4 py-3 text-center text-sm text-ink-600">
+        如您不想在线提交认领，可直接电话 / 微信联系：
+        <a href={`tel:${CONTACT_PHONE}`} className="ml-1 font-semibold text-brand-700 hover:underline">
+          {CONTACT_PHONE}
+        </a>
+      </div>
+
       {status === "success" ? (
         <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-8 text-center">
           <p className="text-lg font-semibold text-emerald-700">提交成功</p>
@@ -170,9 +181,16 @@ export default function ClaimPage() {
           >
             {FORM_ENDPOINT ? "提交" : "提交（唤起邮件）"}
           </button>
-          <p className="text-center text-xs text-ink-400">
-            也可直接邮件联系：<a href={`mailto:${CONTACT_EMAIL}`} className="text-brand-700 hover:underline">{CONTACT_EMAIL}</a>
-          </p>
+          <div className="text-center text-xs text-ink-400">
+            <p>
+              也可直接邮件联系：
+              <a href={`mailto:${CONTACT_EMAIL}`} className="text-brand-700 hover:underline">{CONTACT_EMAIL}</a>
+            </p>
+            <p className="mt-1">
+              或电话 / 微信联系：
+              <a href={`tel:${CONTACT_PHONE}`} className="font-semibold text-brand-700 hover:underline">{CONTACT_PHONE}</a>
+            </p>
+          </div>
         </form>
       )}
     </div>

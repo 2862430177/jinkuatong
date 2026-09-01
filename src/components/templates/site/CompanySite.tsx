@@ -198,6 +198,12 @@ export function CompanySite({ company, belt }: CompanySiteProps) {
             <p className="text-xs text-slate-500">{t(siteI18n.footer.comingSoon)}</p>
           )}
         </div>
+        <div className="border-t border-slate-800 py-3 text-center text-xs text-slate-500">
+          {t(siteI18n.footer.techSupport)}{" "}
+          <a href="tel:17611535739" className="text-slate-400 transition-colors hover:text-white hover:underline">
+            17611535739
+          </a>
+        </div>
         <div className="border-t border-slate-800 py-4 text-center text-xs text-slate-500">
           © {new Date().getFullYear()} {company.name} · {company.location} · Shanxi, China · {t(siteI18n.footer.rights)}
         </div>

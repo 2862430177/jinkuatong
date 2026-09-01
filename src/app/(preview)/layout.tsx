@@ -16,6 +16,10 @@ export default function PreviewLayout({ children }: { children: React.ReactNode 
         <Link href="/claim" className="hidden text-brand-700 hover:underline sm:inline">
           预约同款模板建站
         </Link>
+        <span className="mx-2 hidden sm:inline">·</span>
+        <a href="tel:17611535739" className="hidden text-brand-700 hover:underline sm:inline">
+          电话 17611535739
+        </a>
       </div>
       {children}
     </div>

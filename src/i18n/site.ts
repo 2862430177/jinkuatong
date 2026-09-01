@@ -97,6 +97,8 @@ export const siteI18n = {
     comingSoon: { en: "Official site coming soon — contact us for product information.", zh: "正式官网建设中——欢迎联系我们获取产品信息。" },
     rights: { en: "All Rights Reserved", zh: "版权所有" },
     backToPlatform: { en: "Preview by JinKuaTong", zh: "晋跨通模板效果预览" },
+    /** 技术支持联系电话（晋跨通客服，微信同号） */
+    techSupport: { en: "Tech support:", zh: "技术支持：" },
   },
 } as const;
 

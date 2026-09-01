@@ -49,6 +49,9 @@ export function Footer() {
             <p className="mt-4 text-sm text-white/60">
               联系：<a href="mailto:hello@jinkuatong.com" className="text-gold-400 hover:underline">hello@jinkuatong.com</a>
             </p>
+            <p className="mt-1 text-sm text-white/60">
+              技术支持：<a href="tel:17611535739" className="text-gold-400 hover:underline">17611535739</a>
+            </p>
             {/* 海外社媒入口（todo G3） */}
             <div className="mt-4 flex gap-3">
               {socialLinks.map((s) => (
