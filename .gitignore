@@ -37,6 +37,7 @@ dev.err.log
 /out_prev_0901/
 /out_prev_0902/
 /out_prev_0902b/
+/out_prev_*/
 /.next_prev_*/
 
 # stray temp file

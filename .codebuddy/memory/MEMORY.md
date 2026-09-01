@@ -4,6 +4,7 @@
 - 定位：让山西制造，一站卖全球（面向山西产业带中小外贸企业的出海服务平台）。
 - 技术栈：Next.js 15（App Router）+ TypeScript strict + Tailwind CSS v4，静态导出 `output:'export'` 部署 Cloudflare Pages。
 - 文档链：`docs/market-report.md` → `requirements.md` → `todo-list.md` → `design-detail.md`（当前 v0.2）。
+- Git：仓库 **https://github.com/2862430177/jinkuatong.git**（分支 main，2026-09-02 首次初始化推送）；`.gitignore` 已忽略全部构建备份目录（`out_*`/`.next_prev_*`）与 dev 日志。
 
 ## 关键架构约定
 - 目录：`app/` 根 layout 仅 html/body；主站页面在 `(main)` 路由组（Header/Footer/CookieBanner），独立站效果页在 `(preview)` 路由组（脱离平台外壳）；数据唯一数据源 `src/data/`（templates / industrial-belts / companies，companies 含 `channelTypeNames` 渠道中文名）。
@@ -22,6 +23,7 @@
 - Playwright MCP 需 `npx -y playwright@1.57.0 install chromium-headless-shell`（1200 版本）；Puppeteer MCP 可用作文本验证替代。
 - 静态导出产物验证：`python -m http.server 3001 --directory out`。**交互验证优先 Playwright MCP**（Puppeteer MCP 默认视口 800×600 点不到 lg:flex 桌面 nav 按钮，且实例偶发不执行 JS；长页面取文用 `textContent` 而非 `innerText`；localStorage 跨同源页面共享语言记忆）。
 - `out/` 在 .gitignore 中，`search_content`（rg）默认搜不到，检查静态产物用 PowerShell `Select-String` 或直接读文件。
+- **`git add .` 会把点开头的 `.next_prev_*` 构建备份目录一并暂存**（list_dir 不显示点目录，易遗漏）；`.gitignore` 已用 `/.next_prev_*/` 通配忽略，误暂存需 `git rm --cached -r` 撤出。
 
 ## 当前进度（2026-09-02，v0.5：企业规模化集成完成）
 - **企业集成口径确认为"4 大类 × 每类 Top50 = 200 家"（A1 部分决策）**：companies.ts 40 → 200 家（`src/data/companies-extra.ts` 新增 160 家：真实归类仅 2 家恒硕法兰/盐湖红浩机电 + 158 家产业名占位"产业带·产品 NN"）；公开抓取名录集 33 分类 608 家真实企业（`scripts/data/industry-companies.json`），220 家未归类进 registry 待集成池（50 → 270 家，`/registry` 页）；`src/data/integration.ts` 提供统计（total 1963 / integrated 200 / pending 1763），首页数据看板动态展示。build 426 页全通过。占位替换待官方备案名录。
