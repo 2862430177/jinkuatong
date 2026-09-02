@@ -38,7 +38,7 @@ const sections = [
   {
     title: "5. 您的权利",
     paragraphs: [
-      "您有权查询、更正或删除我们持有的您的个人信息。如需行使上述权利，请发送邮件至 hello@jinkuatong.com，我们将在 15 个工作日内处理。",
+      "您有权查询、更正或删除我们持有的您的个人信息。如需行使上述权利，请发送邮件至 hewei.419763673@gmail.com，我们将在 15 个工作日内处理。",
     ],
   },
   {
@@ -66,7 +66,7 @@ export default function PrivacyPage() {
           </section>
         ))}
         <p className="border-t border-slate-200 pt-6 text-sm text-ink-400">
-          联系方式：<a href="mailto:hello@jinkuatong.com" className="text-brand-700 hover:underline">hello@jinkuatong.com</a> · 山西·太原
+          联系方式：<a href="mailto:hewei.419763673@gmail.com" className="text-brand-700 hover:underline">hewei.419763673@gmail.com</a> · 山西·太原
         </p>
       </div>
     </div>

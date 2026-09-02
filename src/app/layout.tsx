@@ -40,7 +40,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     name: "晋跨通 JinKuaTong",
     url: SITE_URL,
     description: "面向山西产业带中小外贸企业，提供独立站建站（4 套行业模板）、出海渠道地图、合规与海外仓一站式服务。",
-    email: "hello@jinkuatong.com",
+    email: "hewei.419763673@gmail.com",
     areaServed: "山西",
     knowsAbout: ["独立站建站", "跨境电商", "出海合规", "海外仓"],
   };

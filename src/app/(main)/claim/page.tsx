@@ -8,7 +8,7 @@ import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 
-const CONTACT_EMAIL = "hello@jinkuatong.com";
+const CONTACT_EMAIL = "hewei.419763673@gmail.com";
 
 /** 认领/建站人工客服手机号（微信同号）：用户不便在线提交表单时可电话联系 */
 const CONTACT_PHONE = "17611535739";

@@ -47,7 +47,7 @@ export function Footer() {
               让山西制造，一站卖全球。面向山西产业带中小外贸企业，提供从「建站 → 获客 → 合规 → 履约」的一站式出海服务。
             </p>
             <p className="mt-4 text-sm text-white/60">
-              联系：<a href="mailto:hello@jinkuatong.com" className="text-gold-400 hover:underline">hello@jinkuatong.com</a>
+              联系：<a href="mailto:hewei.419763673@gmail.com" className="text-gold-400 hover:underline">hewei.419763673@gmail.com</a>
             </p>
             <p className="mt-1 text-sm text-white/60">
               技术支持：<a href="tel:17611535739" className="text-gold-400 hover:underline">17611535739</a>

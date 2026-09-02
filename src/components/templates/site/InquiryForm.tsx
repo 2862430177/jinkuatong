@@ -1,9 +1,15 @@
 "use client";
 // 询盘表单（真实可交互）：静态站无后端，提交时通过 mailto 唤起邮箱客户端，并给出成功提示。
+// 收件人路由（方案B）：企业已核验邮箱 → 否则默认兜底邮箱；邮件正文附带询盘来源。
 // 说明：文案随独立站语言（lang）切换，语言相关文案见 src/i18n/site.ts。
 import { useState } from "react";
 import type { Company } from "@/data/companies";
 import { pick } from "@/data/site-content";
+import {
+  FALLBACK_INQUIRY_EMAIL,
+  INQUIRY_SOURCE_URL,
+  VERIFIED_COMPANY_EMAILS,
+} from "@/data/verified-emails";
 import { siteI18n } from "@/i18n/site";
 import type { SiteLang } from "@/i18n/site";
 
@@ -12,14 +18,13 @@ interface InquiryFormProps {
   lang: SiteLang;
 }
 
-/** 生成询盘接收邮箱：优先取企业首个渠道的域名，无渠道时用占位域名 */
+/**
+ * 询盘接收邮箱（方案B 收件人路由）：
+ * - 企业已有「已核验邮箱」（VERIFIED_COMPANY_EMAILS）→ 询盘直接发送至该公司销售邮箱；
+ * - 暂无已核验邮箱 → 发送至默认兜底收件人（晋跨通平台客服邮箱，人工对接转发）。
+ */
 export function getInquiryEmail(company: Company): string {
-  const url = company.channels[0]?.url;
-  if (url) {
-    const host = url.replace(/^https?:\/\//, "").split("/")[0].replace(/^www\./, "");
-    return `sales@${host}`;
-  }
-  return `sales@${company.slug}.jinkuatong.site`;
+  return VERIFIED_COMPANY_EMAILS[company.slug] ?? FALLBACK_INQUIRY_EMAIL;
 }
 
 export function InquiryForm({ company, lang }: InquiryFormProps) {
@@ -46,11 +51,22 @@ export function InquiryForm({ company, lang }: InquiryFormProps) {
       return;
     }
     // 静态站无后端：将询盘内容拼入 mailto，唤起客户邮箱客户端发送
+    // 收件人为 getInquiryEmail 的路由结果；正文附带询盘来源与企业信息，便于识别线索渠道与归属企业
     const subject = encodeURIComponent(
       `Inquiry from ${form.name.trim()}${form.company.trim() ? ` (${form.company.trim()})` : ""}`,
     );
     const body = encodeURIComponent(
-      `Name: ${form.name.trim()}\nEmail: ${form.email.trim()}\nCompany: ${form.company.trim()}\n\nMessage:\n${form.message.trim()}`,
+      [
+        `Name: ${form.name.trim()}`,
+        `Email: ${form.email.trim()}`,
+        `Company: ${form.company.trim()}`,
+        "",
+        `Message:\n${form.message.trim()}`,
+        "",
+        `--`,
+        `Inquiry source: ${INQUIRY_SOURCE_URL}`,
+        `Company profile: ${company.name} · ${company.location}`,
+      ].join("\n"),
     );
     window.location.href = `mailto:${getInquiryEmail(company)}?subject=${subject}&body=${body}`;
     setSent(true);

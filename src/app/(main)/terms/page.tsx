@@ -58,7 +58,7 @@ export default function TermsPage() {
           </section>
         ))}
         <p className="border-t border-slate-200 pt-6 text-sm text-ink-400">
-          如有疑问请联系：<a href="mailto:hello@jinkuatong.com" className="text-brand-700 hover:underline">hello@jinkuatong.com</a>
+          如有疑问请联系：<a href="mailto:hewei.419763673@gmail.com" className="text-brand-700 hover:underline">hewei.419763673@gmail.com</a>
         </p>
       </div>
     </div>
