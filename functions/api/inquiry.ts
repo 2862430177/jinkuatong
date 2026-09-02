@@ -109,6 +109,14 @@ function validate(p: InquiryPayload): string | null {
   return null;
 }
 
+/** 发信结果：失败时附带上游 HTTP 状态与响应片段，便于 DEBUG_MAIL=1 时线上排查 */
+type SendResult = { ok: true } | { ok: false; status: number; upstream?: string };
+
+/** 读取上游失败响应前 400 字符（不发回敏感字段，仅为诊断线索） */
+async function readUpstreamError(res: Response): Promise<string> {
+  return (await res.text().catch(() => "")).slice(0, 400);
+}
+
 /** 经 SendGrid v3 Mail Send 发送（免域名：已验证 Single Sender 即可对任意收件人发信） */
 async function sendViaSendGrid(
   c: { apiKey: string; fromEmail: string; fromName: string },
@@ -116,7 +124,7 @@ async function sendViaSendGrid(
   replyTo: string,
   subject: string,
   text: string
-): Promise<boolean> {
+): Promise<SendResult> {
   const res = await fetch("https://api.sendgrid.com/v3/mail/send", {
     method: "POST",
     headers: {
@@ -131,7 +139,8 @@ async function sendViaSendGrid(
       content: [{ type: "text/plain", value: text }],
     }),
   });
-  return res.ok;
+  if (res.ok) return { ok: true };
+  return { ok: false, status: res.status, upstream: await readUpstreamError(res) };
 }
 
 /** 经 Resend /emails 发送（需账号内已核验的发送域名） */
@@ -141,7 +150,7 @@ async function sendViaResend(
   replyTo: string,
   subject: string,
   text: string
-): Promise<boolean> {
+): Promise<SendResult> {
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
@@ -150,7 +159,8 @@ async function sendViaResend(
     },
     body: JSON.stringify({ from: c.from, to: [to], reply_to: [replyTo], subject, text }),
   });
-  return res.ok;
+  if (res.ok) return { ok: true };
+  return { ok: false, status: res.status, upstream: await readUpstreamError(res) };
 }
 
 export const onRequestPost: (ctx: RouteContext) => Promise<Response> = async (ctx) => {
@@ -183,8 +193,11 @@ export const onRequestPost: (ctx: RouteContext) => Promise<Response> = async (ct
     channel.provider === "sendgrid"
       ? await sendViaSendGrid(channel, to, payload.email!, subject, text)
       : await sendViaResend(channel, to, payload.email!, subject, text);
-  if (!sent) {
-    // 不透传具体错误细节，统一返回 502，前端给兜底引导（便于排查用非敏感错误码）
+  if (!sent.ok) {
+    // 默认不透传细节统一 502，前端给兜底引导；DEBUG_MAIL=1（线上排查期）附上游状态与片段
+    if (env.DEBUG_MAIL === "1") {
+      return json({ ok: false, error: "SEND_FAILED", status: sent.status, upstream: sent.upstream }, 502);
+    }
     return json({ ok: false, error: "SEND_FAILED" }, 502);
   }
   return json({ ok: true }, 200);
