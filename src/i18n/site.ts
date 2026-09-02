@@ -85,11 +85,13 @@ export const siteI18n = {
     message: { en: "Message *", zh: "留言 *" },
     messagePlaceholder: { en: "Product, quantity, target market, etc.", zh: "产品、数量、目标市场等" },
     send: { en: "Send Inquiry", zh: "发送询盘" },
+    sending: { en: "Sending…", zh: "发送中…" },
     errorRequired: { en: "Please fill in your name, email and message.", zh: "请填写姓名、邮箱与留言。" },
     errorEmail: { en: "Please enter a valid email address.", zh: "请输入有效的邮箱地址。" },
+    errorSend: { en: "Auto-send failed. Please email us directly:", zh: "自动发送失败，请直接邮件联系我们：" },
     success: {
-      en: "✓ Your email client should open with the inquiry pre-filled. We reply within 24 hours.",
-      zh: "✓ 邮箱客户端已打开并预填询盘内容，我们将在 24 小时内回复。",
+      en: "✓ Your inquiry has been sent. We reply within 24 hours.",
+      zh: "✓ 询盘已发送，我们将在 24 小时内回复。",
     },
   },
   /** 页脚 */

@@ -1,13 +1,16 @@
 "use client";
-// 询盘表单（真实可交互）：静态站无后端，提交时通过 mailto 唤起邮箱客户端，并给出成功提示。
-// 收件人路由（方案B）：企业已核验邮箱 → 否则默认兜底邮箱；邮件正文附带询盘来源。
+// 询盘表单（方案B 完整版）：点击「发送」后通过 Cloudflare Pages Function（/api/inquiry）自动发信，
+// 不再唤起买家本地邮箱客户端。收件人由服务器按企业 slug 路由：
+// - 企业有已核验邮箱（src/data/verified-emails.ts）→ 询盘直达该企业销售邮箱；
+// - 否则 → 发送至默认兜底收件人（晋跨通平台客服邮箱，人工对接转发）。
+// 邮件附带询盘来源（https://jinkuatong.pages.dev/）；reply-to 为买家邮箱，企业可直接回复。
+// 自动发送失败时显示兜底引导（mailto 到目标收件邮箱），避免询盘静默丢失。
 // 说明：文案随独立站语言（lang）切换，语言相关文案见 src/i18n/site.ts。
 import { useState } from "react";
 import type { Company } from "@/data/companies";
 import { pick } from "@/data/site-content";
 import {
   FALLBACK_INQUIRY_EMAIL,
-  INQUIRY_SOURCE_URL,
   VERIFIED_COMPANY_EMAILS,
 } from "@/data/verified-emails";
 import { siteI18n } from "@/i18n/site";
@@ -19,9 +22,9 @@ interface InquiryFormProps {
 }
 
 /**
- * 询盘接收邮箱（方案B 收件人路由）：
- * - 企业已有「已核验邮箱」（VERIFIED_COMPANY_EMAILS）→ 询盘直接发送至该公司销售邮箱；
- * - 暂无已核验邮箱 → 发送至默认兜底收件人（晋跨通平台客服邮箱，人工对接转发）。
+ * 询盘目标收件邮箱（与服务器路由口径一致，供联系区展示与失败兜底）：
+ * - 企业已有「已核验邮箱」（VERIFIED_COMPANY_EMAILS）→ 该企业销售邮箱；
+ * - 暂无已核验邮箱 → 默认兜底收件人（晋跨通平台客服邮箱，人工对接转发）。
  */
 export function getInquiryEmail(company: Company): string {
   return VERIFIED_COMPANY_EMAILS[company.slug] ?? FALLBACK_INQUIRY_EMAIL;
@@ -30,18 +33,23 @@ export function getInquiryEmail(company: Company): string {
 export function InquiryForm({ company, lang }: InquiryFormProps) {
   const [form, setForm] = useState({ name: "", email: "", company: "", message: "" });
   const [sent, setSent] = useState(false);
+  const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+  const [sendFailed, setSendFailed] = useState(false);
   const t = (x: (typeof siteI18n.form)[keyof typeof siteI18n.form]) => pick(x, lang);
 
   function update(field: keyof typeof form) {
     return (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       setForm((prev) => ({ ...prev, [field]: e.target.value }));
       setError("");
+      setSendFailed(false);
     };
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  /** 提交询盘：POST /api/inquiry 由 Pages Function 自动发信（收件人服务器路由） */
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (sending || sent) return;
     if (!form.name.trim() || !form.email.trim() || !form.message.trim()) {
       setError(t(siteI18n.form.errorRequired));
       return;
@@ -50,26 +58,35 @@ export function InquiryForm({ company, lang }: InquiryFormProps) {
       setError(t(siteI18n.form.errorEmail));
       return;
     }
-    // 静态站无后端：将询盘内容拼入 mailto，唤起客户邮箱客户端发送
-    // 收件人为 getInquiryEmail 的路由结果；正文附带询盘来源与企业信息，便于识别线索渠道与归属企业
-    const subject = encodeURIComponent(
-      `Inquiry from ${form.name.trim()}${form.company.trim() ? ` (${form.company.trim()})` : ""}`,
-    );
-    const body = encodeURIComponent(
-      [
-        `Name: ${form.name.trim()}`,
-        `Email: ${form.email.trim()}`,
-        `Company: ${form.company.trim()}`,
-        "",
-        `Message:\n${form.message.trim()}`,
-        "",
-        `--`,
-        `Inquiry source: ${INQUIRY_SOURCE_URL}`,
-        `Company profile: ${company.name} · ${company.location}`,
-      ].join("\n"),
-    );
-    window.location.href = `mailto:${getInquiryEmail(company)}?subject=${subject}&body=${body}`;
-    setSent(true);
+    setError("");
+    setSendFailed(false);
+    setSending(true);
+    try {
+      const res = await fetch("/api/inquiry", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          slug: company.slug,
+          name: form.name.trim(),
+          email: form.email.trim(),
+          company: form.company.trim(),
+          companyName: company.name,
+          companyLocation: company.location,
+          message: form.message.trim(),
+        }),
+      });
+      const data = (await res.json().catch(() => null)) as { ok?: boolean } | null;
+      if (res.ok && data?.ok) {
+        setSent(true);
+        return;
+      }
+      // 服务端未配置/发送失败：给出 mailto 兜底，不让询盘静默丢失
+      setSendFailed(true);
+    } catch {
+      setSendFailed(true);
+    } finally {
+      setSending(false);
+    }
   }
 
   const inputCls =
@@ -130,14 +147,23 @@ export function InquiryForm({ company, lang }: InquiryFormProps) {
         />
       </div>
       {error ? <p className="text-xs text-red-600">{error}</p> : null}
+      {sendFailed ? (
+        <p className="rounded bg-red-50 px-3 py-2 text-xs text-red-700">
+          {t(siteI18n.form.errorSend)}{" "}
+          <a href={`mailto:${getInquiryEmail(company)}`} className="underline">
+            {getInquiryEmail(company)}
+          </a>
+        </p>
+      ) : null}
       {sent ? (
         <p className="rounded bg-emerald-50 px-3 py-2 text-xs text-emerald-700">{t(siteI18n.form.success)}</p>
       ) : (
         <button
           type="submit"
-          className="w-full rounded bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-slate-700"
+          disabled={sending}
+          className="w-full rounded bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {t(siteI18n.form.send)}
+          {sending ? t(siteI18n.form.sending) : t(siteI18n.form.send)}
         </button>
       )}
     </form>
