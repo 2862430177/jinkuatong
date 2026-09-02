@@ -35,8 +35,6 @@ interface InquiryPayload {
   companyLocation?: string;
   /** 询盘内容 */
   message?: string;
-  /** 【临时诊断】置 true 时回显线上环境变量状态（不回显完整密钥值），排查完成后移除 */
-  debug?: boolean;
 }
 
 interface RouteContext {
@@ -174,26 +172,6 @@ export const onRequestPost: (ctx: RouteContext) => Promise<Response> = async (ct
   } catch {
     return json({ ok: false, error: "INVALID_BODY" }, 400);
   }
-  // 【临时诊断】payload.debug=true 时回显环境变量状态（仅长度与前缀，不回显完整密钥），排查后移除
-  if (payload.debug) {
-    const mask = (v: string | undefined): string | undefined =>
-      v ? `${v.slice(0, 6)}…(len=${v.length})` : undefined;
-    return json(
-      {
-        ok: true,
-        env: {
-          MAIL_PROVIDER: env.MAIL_PROVIDER,
-          RESEND_API_KEY: mask(env.RESEND_API_KEY),
-          RESEND_FROM: mask(env.RESEND_FROM),
-          ROUTE_ALL_TO: mask(env.ROUTE_ALL_TO),
-          SENDGRID_API_KEY: mask(env.SENDGRID_API_KEY),
-          SENDGRID_FROM: mask(env.SENDGRID_FROM),
-          DEBUG_MAIL: env.DEBUG_MAIL,
-        },
-      },
-      200
-    );
-  }
 
   // 未配置任何可用发信通道时返回可读错误，前端引导买家改用邮件联系（避免静默丢询盘）
   const channel = resolveChannel(env);
@@ -218,8 +196,8 @@ export const onRequestPost: (ctx: RouteContext) => Promise<Response> = async (ct
       ? await sendViaSendGrid(channel, to, payload.email!, subject, text)
       : await sendViaResend(channel, to, payload.email!, subject, text);
   if (!sent.ok) {
-    // 【临时诊断版】附上游状态与片段定位问题，排查完成后移除；正式版仅返回 SEND_FAILED
-    return json({ ok: false, error: "SEND_FAILED", status: sent.status, upstream: sent.upstream }, 502);
+    // 不透传上游错误细节，统一返回 502，前端给兜底引导（排查可用上游记录）
+    return json({ ok: false, error: "SEND_FAILED" }, 502);
   }
   return json({ ok: true }, 200);
 };
