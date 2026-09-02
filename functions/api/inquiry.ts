@@ -4,9 +4,19 @@
 // 交互：客户端 InquiryForm 提交 → POST /api/inquiry（JSON）→ 本函数按企业 slug 路由收件人：
 //   - 企业有已核验邮箱（src/data/verified-emails.ts 名单）→ 自动直发该企业销售邮箱；
 //   - 无核验邮箱 → 自动发送至默认兜底收件人（晋跨通平台客服邮箱，人工对接转发）。
-// 发信走 Resend REST API，需在 Cloudflare Pages → Settings → Environment variables 配置：
-//   RESEND_API_KEY = re_xxx           （Resend 控制台 → API Keys 生成）
-//   RESEND_FROM    = "晋跨通 <inquiry@你的已核验域名>" （Resend → Domains 已验证的发送地址，不支持 gmail/qq 等公共邮箱）
+// 发信通道（2026-09-02 支持双 Provider，SendGrid 当前默认，Resend 保留可随时切回）：
+//   Provider 选择：环境变量 MAIL_PROVIDER = "sendgrid" | "resend"；
+//   未显式配置时自动探测：存在 SENDGRID_API_KEY 用 SendGrid，否则存在 RESEND_API_KEY 用 Resend。
+//   1) SendGrid（无需验证域名）：需在 Cloudflare Pages → Settings → Environment variables 配置
+//        SENDGRID_API_KEY       （SendGrid 控制台 → Settings → API Keys，权限勾 Send Mail）
+//        SENDGRID_FROM          （已验证的 Single Sender 邮箱：SendGrid → Settings → Sender Authentication
+//                                 添加 Single Sender 后点击验证邮件中的链接即可，支持 gmail/qq 等公共邮箱）
+//        SENDGRID_FROM_NAME     （可选，发件人展示名，默认 "JinKuaTong"）
+//   2) Resend（需验证自定义域名）：配置 RESEND_API_KEY = re_xxx 与 RESEND_FROM = "晋跨通 <inquiry@已核验域名>"，
+//        无验证域名时仅能发给账号注册邮箱（测试模式），故线上直发客户请用 SendGrid 或先验证域名。
+// 收件人路由开关（A 过渡模式 → B 正式模式）：
+//   ROUTE_ALL_TO = 管理员邮箱（如 2862430177@qq.com）：所有询盘统一发至管理员，运营人工对接转发；
+//   移除该变量后恢复自动路由：有核验邮箱的企业直达，其余发 FALLBACK_INQUIRY_EMAIL 兜底。
 // 邮件附带询盘来源（INQUIRY_SOURCE_URL）与企业信息，便于企业识别线索来自晋跨通；reply-to 设为买家邮箱，企业可直接回复。
 import { FALLBACK_INQUIRY_EMAIL, INQUIRY_SOURCE_URL, VERIFIED_COMPANY_EMAILS } from "../../src/data/verified-emails";
 
@@ -32,6 +42,11 @@ interface RouteContext {
   env: Record<string, string | undefined>;
 }
 
+/** 可用发信通道（统一抽象：无论哪个 Provider 均以 fetch 调用其 REST API） */
+type MailChannel =
+  | { provider: "sendgrid"; apiKey: string; fromEmail: string; fromName: string }
+  | { provider: "resend"; apiKey: string; from: string };
+
 /** JSON 响应工具 */
 function json(data: unknown, status: number): Response {
   return new Response(JSON.stringify(data), {
@@ -40,8 +55,29 @@ function json(data: unknown, status: number): Response {
   });
 }
 
-/** 收件人路由（单一职责：按 slug 返回已核验企业邮箱或默认兜底） */
-function resolveRecipient(slug: string | undefined): string {
+/** 单一职责：依据环境变量解析当前可用的发信通道；均未配置（或配置不完整）时返回 null */
+function resolveChannel(env: RouteContext["env"]): MailChannel | null {
+  const explicit = env.MAIL_PROVIDER;
+  // 显式指定 resend，或未指定且仅存在 Resend 配置时 → 走 Resend
+  if (explicit === "resend" || (!explicit && !env.SENDGRID_API_KEY && env.RESEND_API_KEY)) {
+    if (!env.RESEND_API_KEY || !env.RESEND_FROM) return null;
+    return { provider: "resend", apiKey: env.RESEND_API_KEY, from: env.RESEND_FROM };
+  }
+  // 默认（含 MAIL_PROVIDER=sendgrid）→ 走 SendGrid
+  if (!env.SENDGRID_API_KEY || !env.SENDGRID_FROM) return null;
+  return {
+    provider: "sendgrid",
+    apiKey: env.SENDGRID_API_KEY,
+    fromEmail: env.SENDGRID_FROM,
+    fromName: env.SENDGRID_FROM_NAME?.trim() || "JinKuaTong",
+  };
+}
+
+/** 收件人路由（单一职责：A 过渡模式下全部发管理员邮箱；否则按 slug 返回已核验企业邮箱或默认兜底） */
+function resolveRecipient(slug: string | undefined, env: RouteContext["env"]): string {
+  // A 过渡模式：ROUTE_ALL_TO 非空时所有询盘统一进管理员邮箱，人工对接转发企业；
+  // B 正式模式就绪后移除该环境变量即恢复「直达已核验企业邮箱 + 兜底」，无需改代码。
+  if (env.ROUTE_ALL_TO?.trim()) return env.ROUTE_ALL_TO.trim();
   return (slug && VERIFIED_COMPANY_EMAILS[slug]) || FALLBACK_INQUIRY_EMAIL;
 }
 
@@ -73,12 +109,55 @@ function validate(p: InquiryPayload): string | null {
   return null;
 }
 
+/** 经 SendGrid v3 Mail Send 发送（免域名：已验证 Single Sender 即可对任意收件人发信） */
+async function sendViaSendGrid(
+  c: { apiKey: string; fromEmail: string; fromName: string },
+  to: string,
+  replyTo: string,
+  subject: string,
+  text: string
+): Promise<boolean> {
+  const res = await fetch("https://api.sendgrid.com/v3/mail/send", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${c.apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      personalizations: [{ to: [{ email: to }] }],
+      from: { email: c.fromEmail, name: c.fromName },
+      reply_to: { email: replyTo },
+      subject,
+      content: [{ type: "text/plain", value: text }],
+    }),
+  });
+  return res.ok;
+}
+
+/** 经 Resend /emails 发送（需账号内已核验的发送域名） */
+async function sendViaResend(
+  c: { apiKey: string; from: string },
+  to: string,
+  replyTo: string,
+  subject: string,
+  text: string
+): Promise<boolean> {
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${c.apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ from: c.from, to: [to], reply_to: [replyTo], subject, text }),
+  });
+  return res.ok;
+}
+
 export const onRequestPost: (ctx: RouteContext) => Promise<Response> = async (ctx) => {
   const { request, env } = ctx;
-  // 环境未配置 Resend 时返回可读错误，前端引导买家改用邮件联系（避免静默丢询盘）
-  const apiKey = env.RESEND_API_KEY;
-  const from = env.RESEND_FROM;
-  if (!apiKey || !from) {
+  // 未配置任何可用发信通道时返回可读错误，前端引导买家改用邮件联系（避免静默丢询盘）
+  const channel = resolveChannel(env);
+  if (!channel) {
     return json({ ok: false, error: "SERVER_NOT_CONFIGURED" }, 503);
   }
 
@@ -91,7 +170,7 @@ export const onRequestPost: (ctx: RouteContext) => Promise<Response> = async (ct
   const bad = validate(payload);
   if (bad) return json({ ok: false, error: bad }, 400);
 
-  const to = resolveRecipient(payload.slug);
+  const to = resolveRecipient(payload.slug, env);
   const { subject, text } = buildMail({
     ...payload,
     name: payload.name!.trim(),
@@ -99,16 +178,13 @@ export const onRequestPost: (ctx: RouteContext) => Promise<Response> = async (ct
     message: payload.message!.trim(),
   });
 
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ from, to: [to], reply_to: [payload.email], subject, text }),
-  });
-  if (!res.ok) {
-    // 透传非敏感错误码，便于排查（不发信失败时也返回 502，前端给兜底引导）
+  // 按所选 Provider 分发发信（两者均为纯文本询盘邮件，语义一致）
+  const sent =
+    channel.provider === "sendgrid"
+      ? await sendViaSendGrid(channel, to, payload.email, subject, text)
+      : await sendViaResend(channel, to, payload.email, subject, text);
+  if (!sent) {
+    // 不透传具体错误细节，统一返回 502，前端给兜底引导（便于排查用非敏感错误码）
     return json({ ok: false, error: "SEND_FAILED" }, 502);
   }
   return json({ ok: true }, 200);
