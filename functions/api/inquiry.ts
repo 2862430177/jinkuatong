@@ -194,11 +194,8 @@ export const onRequestPost: (ctx: RouteContext) => Promise<Response> = async (ct
       ? await sendViaSendGrid(channel, to, payload.email!, subject, text)
       : await sendViaResend(channel, to, payload.email!, subject, text);
   if (!sent.ok) {
-    // 默认不透传细节统一 502，前端给兜底引导；DEBUG_MAIL=1（线上排查期）附上游状态与片段
-    if (env.DEBUG_MAIL === "1") {
-      return json({ ok: false, error: "SEND_FAILED", status: sent.status, upstream: sent.upstream }, 502);
-    }
-    return json({ ok: false, error: "SEND_FAILED" }, 502);
+    // 【临时诊断版】附上游状态与片段定位问题，排查完成后移除；正式版仅返回 SEND_FAILED
+    return json({ ok: false, error: "SEND_FAILED", status: sent.status, upstream: sent.upstream }, 502);
   }
   return json({ ok: true }, 200);
 };
