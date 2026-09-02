@@ -178,11 +178,11 @@ export const onRequestPost: (ctx: RouteContext) => Promise<Response> = async (ct
     message: payload.message!.trim(),
   });
 
-  // 按所选 Provider 分发发信（两者均为纯文本询盘邮件，语义一致）
+  // 按所选 Provider 分发发信（email 已经 validate() 校验非空，此处用 ! 断言避免 string|undefined 报错）
   const sent =
     channel.provider === "sendgrid"
-      ? await sendViaSendGrid(channel, to, payload.email, subject, text)
-      : await sendViaResend(channel, to, payload.email, subject, text);
+      ? await sendViaSendGrid(channel, to, payload.email!, subject, text)
+      : await sendViaResend(channel, to, payload.email!, subject, text);
   if (!sent) {
     // 不透传具体错误细节，统一返回 502，前端给兜底引导（便于排查用非敏感错误码）
     return json({ ok: false, error: "SEND_FAILED" }, 502);
