@@ -4,16 +4,17 @@
 // 交互：客户端 InquiryForm 提交 → POST /api/inquiry（JSON）→ 本函数按企业 slug 路由收件人：
 //   - 企业有已核验邮箱（src/data/verified-emails.ts 名单）→ 自动直发该企业销售邮箱；
 //   - 无核验邮箱 → 自动发送至默认兜底收件人（晋跨通平台客服邮箱，人工对接转发）。
-// 发信通道（2026-09-02 支持双 Provider，SendGrid 当前默认，Resend 保留可随时切回）：
-//   Provider 选择：环境变量 MAIL_PROVIDER = "sendgrid" | "resend"；
-//   未显式配置时自动探测：存在 SENDGRID_API_KEY 用 SendGrid，否则存在 RESEND_API_KEY 用 Resend。
-//   1) SendGrid（无需验证域名）：需在 Cloudflare Pages → Settings → Environment variables 配置
-//        SENDGRID_API_KEY       （SendGrid 控制台 → Settings → API Keys，权限勾 Send Mail）
-//        SENDGRID_FROM          （已验证的 Single Sender 邮箱：SendGrid → Settings → Sender Authentication
-//                                 添加 Single Sender 后点击验证邮件中的链接即可，支持 gmail/qq 等公共邮箱）
-//        SENDGRID_FROM_NAME     （可选，发件人展示名，默认 "JinKuaTong"）
-//   2) Resend（需验证自定义域名）：配置 RESEND_API_KEY = re_xxx 与 RESEND_FROM = "晋跨通 <inquiry@已核验域名>"，
-//        无验证域名时仅能发给账号注册邮箱（测试模式），故线上直发客户请用 SendGrid 或先验证域名。
+// 发信通道（2026-09-02 支持三 Provider，Brevo 当前默认，SendGrid/Resend 保留可随时切回）：
+//   Provider 选择：环境变量 MAIL_PROVIDER = "brevo" | "sendgrid" | "resend"；
+//   未显式配置时自动探测（按 SENDGRID_API_KEY → BREVO_API_KEY → RESEND_API_KEY 顺序）。
+//   1) Brevo（原 Sendinblue，免域名，当前主力）：需在 Cloudflare Pages → Settings → Environment variables 配置
+//        BREVO_API_KEY       （Brevo 后台 → 右上角头像 → SMTP & API → API Keys → 创建新 Key）
+//        BREVO_FROM          （已验证的发件人邮箱：Brevo 后台 → Senders → 添加邮箱并点验证邮件链接即可，支持 qq 等公共邮箱；
+//                              另请在账号「设置/安全」关闭 API Key 的 IP 白名单，否则云平台 Worker 动态出口 IP 会被 401 拒绝）
+//        BREVO_FROM_NAME     （可选，发件人展示名，默认 "JinKuaTong"）
+//   2) SendGrid（无需验证域名，备用）：SENDGRID_API_KEY / SENDGRID_FROM / SENDGRID_FROM_NAME，模式同 Brevo。
+//   3) Resend（需验证自定义域名，备用）：RESEND_API_KEY = re_xxx 与 RESEND_FROM = "晋跨通 <inquiry@已核验域名>"，
+//        无验证域名时仅能发给账号注册邮箱（测试模式）。
 // 收件人路由开关（A 过渡模式 → B 正式模式）：
 //   ROUTE_ALL_TO = 管理员邮箱（如 2862430177@qq.com）：所有询盘统一发至管理员，运营人工对接转发；
 //   移除该变量后恢复自动路由：有核验邮箱的企业直达，其余发 FALLBACK_INQUIRY_EMAIL 兜底。
@@ -44,6 +45,7 @@ interface RouteContext {
 
 /** 可用发信通道（统一抽象：无论哪个 Provider 均以 fetch 调用其 REST API） */
 type MailChannel =
+  | { provider: "brevo"; apiKey: string; fromEmail: string; fromName: string }
   | { provider: "sendgrid"; apiKey: string; fromEmail: string; fromName: string }
   | { provider: "resend"; apiKey: string; from: string };
 
@@ -57,9 +59,25 @@ function json(data: unknown, status: number): Response {
 
 /** 单一职责：依据环境变量解析当前可用的发信通道；均未配置（或配置不完整）时返回 null */
 function resolveChannel(env: RouteContext["env"]): MailChannel | null {
-  const explicit = env.MAIL_PROVIDER;
-  // 显式指定 resend，或未指定且仅存在 Resend 配置时 → 走 Resend
-  if (explicit === "resend" || (!explicit && !env.SENDGRID_API_KEY && env.RESEND_API_KEY)) {
+  const explicit = env.MAIL_PROVIDER?.trim();
+  // 显式指定 Brevo，或未指定且仅存在 Brevo 配置时 → 走 Brevo
+  if (
+    explicit === "brevo" ||
+    (!explicit && !env.SENDGRID_API_KEY && !env.RESEND_API_KEY && env.BREVO_API_KEY)
+  ) {
+    if (!env.BREVO_API_KEY || !env.BREVO_FROM) return null;
+    return {
+      provider: "brevo",
+      apiKey: env.BREVO_API_KEY,
+      fromEmail: env.BREVO_FROM,
+      fromName: env.BREVO_FROM_NAME?.trim() || "JinKuaTong",
+    };
+  }
+  // 显式指定 Resend，或未指定且仅存在 Resend 配置时 → 走 Resend
+  if (
+    explicit === "resend" ||
+    (!explicit && !env.SENDGRID_API_KEY && !env.BREVO_API_KEY && env.RESEND_API_KEY)
+  ) {
     if (!env.RESEND_API_KEY || !env.RESEND_FROM) return null;
     return { provider: "resend", apiKey: env.RESEND_API_KEY, from: env.RESEND_FROM };
   }
@@ -115,6 +133,33 @@ type SendResult = { ok: true } | { ok: false; status: number; upstream?: string 
 /** 读取上游失败响应前 400 字符（不发回敏感字段，仅为诊断线索） */
 async function readUpstreamError(res: Response): Promise<string> {
   return (await res.text().catch(() => "")).slice(0, 400);
+}
+
+/** 经 Brevo（原 Sendinblue）v3 Transactional Email 发送（免域名：已验证发件人即可对任意收件人发信） */
+async function sendViaBrevo(
+  c: { apiKey: string; fromEmail: string; fromName: string },
+  to: string,
+  replyTo: string,
+  subject: string,
+  text: string
+): Promise<SendResult> {
+  const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: {
+      "api-key": c.apiKey,
+      accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      sender: { email: c.fromEmail, name: c.fromName },
+      to: [{ email: to }],
+      replyTo: { email: replyTo },
+      subject,
+      textContent: text,
+    }),
+  });
+  if (res.ok) return { ok: true };
+  return { ok: false, status: res.status, upstream: await readUpstreamError(res) };
 }
 
 /** 经 SendGrid v3 Mail Send 发送（免域名：已验证 Single Sender 即可对任意收件人发信） */
@@ -192,9 +237,11 @@ export const onRequestPost: (ctx: RouteContext) => Promise<Response> = async (ct
 
   // 按所选 Provider 分发发信（email 已经 validate() 校验非空，此处用 ! 断言避免 string|undefined 报错）
   const sent =
-    channel.provider === "sendgrid"
-      ? await sendViaSendGrid(channel, to, payload.email!, subject, text)
-      : await sendViaResend(channel, to, payload.email!, subject, text);
+    channel.provider === "brevo"
+      ? await sendViaBrevo(channel, to, payload.email!, subject, text)
+      : channel.provider === "sendgrid"
+        ? await sendViaSendGrid(channel, to, payload.email!, subject, text)
+        : await sendViaResend(channel, to, payload.email!, subject, text);
   if (!sent.ok) {
     // 不透传上游错误细节，统一返回 502，前端给兜底引导（排查可用上游记录）
     return json({ ok: false, error: "SEND_FAILED" }, 502);
